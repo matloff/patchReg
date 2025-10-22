@@ -113,5 +113,5 @@ predict.kmpatchout <- function(object,newX)
 }
 
 # examples
-patchReg(svcensus,"wageinc",4,"function(xy)lm(wageinc~.,data=xy)")
-patchReg(svcensus,"gender",2,"function(xy)qeLogit(xy,'gender')")
+# patchReg(svcensus,"wageinc",4,"function(xy)lm(wageinc~.,data=xy)")
+# patchReg(svcensus,"gender",2,"function(xy)qeLogit(xy,'gender')")
