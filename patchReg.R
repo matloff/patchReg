@@ -120,6 +120,8 @@ predict.prout <- function(object,newX)
       closestIdx <- FNN::get.knnx(object$centers,newx,k=1)$nn.index
       tmp <- predict(object[[closestIdx]],newx)
       tmp <- tmp$predClasses
+      if (substr(tmp,1,4) == 'dfr.')
+         tmp <- substr(tmp,5,nchar(tmp))
       preds[i] <- tmp
    }
    preds
@@ -129,3 +131,5 @@ predict.prout <- function(object,newX)
 # patchReg(svcensus,"wageinc",4,"function(xy) lm(wageinc~.,data=xy)")
 # patchReg(svcensus,"gender",2,"function(xy) qeLogit(xy,'gender')")
 # patchReg(svcensus,"wageinc",8,"function(xy) qeKNN(xy,'wageinc',k=100)")
+# patchReg(svcensus,"gender",2,"function(xy) qeKNN(xy,'gender',k=100)")
+# patchReg(svcensus,"occ",2,"function(xy) qeKNN(xy,'occ',k=100)")
