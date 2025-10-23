@@ -15,7 +15,7 @@
 # 
 # 3. no character or logical variables
 
-patchReg <- function(XYdata,yName,numClust,regCall,
+patchReg <- function(XYdata,yName,numClust,regCall,savePreds=FALSE,
    holdout = floor(min(1000,0.1*nrow(XYdata)))) 
 {
 
@@ -53,25 +53,34 @@ patchReg <- function(XYdata,yName,numClust,regCall,
       function(indices) trnXYData[indices,])
 
    # do separate fits to the clusters
-   kmPatchOut <- lapply(clustData,evalr(regCall))
-   # element i of kmPatchOut is the value returned by calling regCall on
+   pROut <- lapply(clustData,evalr(regCall))
+   # element i of pROut is the value returned by calling regCall on
    # cluster i
-   kmPatchOut$centers <- kmeansOut$centers
-   kmPatchOut$factorsInfo <- factorsInfo
-   class(kmPatchOut) <- 'kmpatchout'
+   pROut$centers <- kmeansOut$centers
+   pROut$clustNums <- clustInfo$clustNums
+   pROut$factorsInfo <- factorsInfo
+   pROut$classif <- classif
+   class(pROut) <- 'prout'
 
    if (holdout != 0) {
-      preds <- predict(kmPatchOut,tstXData)
+      preds <- predict(pROut,tstXData)
       if (!classif)
-         kmPatchOut$testAcc <- mean(abs(tstYData[,1] - preds))
+         pROut$testAcc <- mean(abs(tstYData[,1] - preds))
       else 
-         kmPatchOut$testAcc <- mean(tstYData[,1] != preds)
+         pROut$testAcc <- mean(tstYData[,1] != preds)
+      if(savePreds) {
+         preds <- cbind(clustInfo$clustNums,preds)
+         preds <- as.data.frame(preds)
+         names(preds) <- c('clustNums','preds')
+         class(preds) <- 'prpreds'
+         pROut$preds <- preds
+      }
    }
 
-   kmPatchOut
+   pROut
 }
 
-predict.kmpatchout <- function(object,predXData) 
+predict.prout <- function(object,predXData) 
 {
    tmp <- FNN::get.knnx(query=newxData,data=object$centers,k=1)
    indices <- tmp$nn.index
@@ -85,6 +94,8 @@ predict.kmpatchout <- function(object,predXData)
    apply(predXData,1,applyFtn)
 }
 
+predict.prpreds <- function(object) 
+
 findClusters <- function(kmout,trnXdata) 
 {
    clustInfo <- list()
@@ -97,7 +108,7 @@ findClusters <- function(kmout,trnXdata)
    clustInfo
 }
 
-predict.kmpatchout <- function(object,newX) 
+predict.prout <- function(object,newX) 
 {
    if (any(sapply(newX,class) != 'numeric'))
       newX <- regtools::factorsToDummies(newX,omitLast=TRUE,dfOut=TRUE,
@@ -106,12 +117,15 @@ predict.kmpatchout <- function(object,newX)
    preds <- vector(length=npreds)
    for (i in 1:npreds) {
       newx <- newX[i,]
-      closestIdxs <- FNN::get.knnx(object$centers,newx,k=1)$nn.index
-      preds[i] <- predict(object[[closestIdxs]],newx)
+      closestIdx <- FNN::get.knnx(object$centers,newx,k=1)$nn.index
+      tmp <- predict(object[[closestIdx]],newx)
+      tmp <- tmp$predClasses
+      preds[i] <- tmp
    }
    preds
 }
 
 # examples
-# patchReg(svcensus,"wageinc",4,"function(xy)lm(wageinc~.,data=xy)")
-# patchReg(svcensus,"gender",2,"function(xy)qeLogit(xy,'gender')")
+# patchReg(svcensus,"wageinc",4,"function(xy) lm(wageinc~.,data=xy)")
+# patchReg(svcensus,"gender",2,"function(xy) qeLogit(xy,'gender')")
+# patchReg(svcensus,"wageinc",8,"function(xy) qeKNN(xy,'wageinc',k=100)")
