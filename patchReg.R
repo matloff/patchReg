@@ -82,20 +82,6 @@ patchReg <- function(XYdata,yName,numClust,regCall,
    pROut
 }
 
-## predict.prout <- function(object,predXData) 
-## {
-##    tmp <- FNN::get.knnx(query=newxData,data=object$centers,k=1)
-##    indices <- tmp$nn.index
-##    tmp <- cbind(newxData,indices)
-##    applyFtn <- function(rowi) 
-##    {
-##       nc <- ncol(tmp)
-##       j <- rowi[nc]
-##       predict(object[[j]],rowi[-nc])
-##    }
-##    apply(predXData,1,applyFtn)
-## }
-
 plot.prout <- function() 
 {
 
