@@ -15,7 +15,8 @@
 # 
 # 3. no character or logical variables
 
-patchReg <- function(XYdata,yName,numClust,regCall,savePreds=FALSE,
+patchReg <- function(XYdata,yName,numClust,regCall,
+   savePreds=FALSE,regPredName=NULL,classPredName=NULL,
    holdout = floor(min(1000,0.1*nrow(XYdata)))) 
 {
 
@@ -60,6 +61,8 @@ patchReg <- function(XYdata,yName,numClust,regCall,savePreds=FALSE,
    pROut$clustNums <- clustInfo$clustNums
    pROut$factorsInfo <- factorsInfo
    pROut$classif <- classif
+   pROut$regPredName <- regPredName
+   pROut$classPredName <- classPredName
    class(pROut) <- 'prout'
 
    if (holdout != 0) {
@@ -72,7 +75,6 @@ patchReg <- function(XYdata,yName,numClust,regCall,savePreds=FALSE,
          preds <- cbind(clustInfo$clustNums,preds)
          preds <- as.data.frame(preds)
          names(preds) <- c('clustNums','preds')
-         class(preds) <- 'prpreds'
          pROut$preds <- preds
       }
    }
@@ -80,21 +82,24 @@ patchReg <- function(XYdata,yName,numClust,regCall,savePreds=FALSE,
    pROut
 }
 
-predict.prout <- function(object,predXData) 
-{
-   tmp <- FNN::get.knnx(query=newxData,data=object$centers,k=1)
-   indices <- tmp$nn.index
-   tmp <- cbind(newxData,indices)
-   applyFtn <- function(rowi) 
-   {
-      nc <- ncol(tmp)
-      j <- rowi[nc]
-      predict(object[[j]],rowi[-nc])
-   }
-   apply(predXData,1,applyFtn)
-}
+## predict.prout <- function(object,predXData) 
+## {
+##    tmp <- FNN::get.knnx(query=newxData,data=object$centers,k=1)
+##    indices <- tmp$nn.index
+##    tmp <- cbind(newxData,indices)
+##    applyFtn <- function(rowi) 
+##    {
+##       nc <- ncol(tmp)
+##       j <- rowi[nc]
+##       predict(object[[j]],rowi[-nc])
+##    }
+##    apply(predXData,1,applyFtn)
+## }
 
-predict.prpreds <- function(object) 
+plot.prout <- function() 
+{
+
+}
 
 findClusters <- function(kmout,trnXdata) 
 {
@@ -119,9 +124,18 @@ predict.prout <- function(object,newX)
       newx <- newX[i,]
       closestIdx <- FNN::get.knnx(object$centers,newx,k=1)$nn.index
       tmp <- predict(object[[closestIdx]],newx)
-      tmp <- tmp$predClasses
-      if (substr(tmp,1,4) == 'dfr.')
-         tmp <- substr(tmp,5,nchar(tmp))
+      if (object$classif) {
+         # tmp <- tmp$predClasses  # assumes qeML
+         classPredName <- object$classPredName
+         if (!is.null(classPredName)) {
+            tmp <- tmp[[classPredName]]
+            if (substr(tmp,1,4) == 'dfr.')  # due to factorsToDummies
+               tmp <- substr(tmp,5,nchar(tmp))
+         }
+      } else {  # regression case
+         regPredName <- object$regPredName
+         if (!is.null(regPredName)) tmp <- tmp[[regPredName]]
+      }
       preds[i] <- tmp
    }
    preds
@@ -131,5 +145,11 @@ predict.prout <- function(object,newX)
 # patchReg(svcensus,"wageinc",4,"function(xy) lm(wageinc~.,data=xy)")
 # patchReg(svcensus,"gender",2,"function(xy) qeLogit(xy,'gender')")
 # patchReg(svcensus,"wageinc",8,"function(xy) qeKNN(xy,'wageinc',k=100)")
-# patchReg(svcensus,"gender",2,"function(xy) qeKNN(xy,'gender',k=100)")
-# patchReg(svcensus,"occ",2,"function(xy) qeKNN(xy,'occ',k=100)")
+# patchReg(svcensus,"gender",2,"function(xy) qeKNN(xy,'gender',k=100,
+#   classPredName='predClasses')")
+# patchReg(svcensus,"occ",2,"function(xy) qeKNN(xy,'occ',k=100,
+#   classPredName='predClasses')")
+# patchReg(svcensus,"gender",2,"function(xy) qeLASSO(xy,'gender')",
+#   classPredName='predClasses')
+# patchReg(svcensus,"wageinc",2,"function(xy) ranger(wageinc ~ .,data=xy)",
+#    regPredName='predictions')
