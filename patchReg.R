@@ -122,18 +122,21 @@ predict.prout <- function(object,newX)
       }
       preds[i] <- tmp
    }
+   if (inherits(preds,'list')) preds <- unlist(preds)
    preds
 }
 
 # examples
 # patchReg(svcensus,"wageinc",4,"function(xy) lm(wageinc~.,data=xy)")
-# patchReg(svcensus,"gender",2,"function(xy) qeLogit(xy,'gender')")
+# patchReg(svcensus,"gender",2,"function(xy) qeLogit(xy,'gender',
+#    yesYVal='female')",classPredName='predClasses')
 # patchReg(svcensus,"wageinc",8,"function(xy) qeKNN(xy,'wageinc',k=100)")
-# patchReg(svcensus,"gender",2,"function(xy) qeKNN(xy,'gender',k=100,
-#   classPredName='predClasses')")
-# patchReg(svcensus,"occ",2,"function(xy) qeKNN(xy,'occ',k=100,
-#   classPredName='predClasses')")
+# patchReg(svcensus,"gender",2,"function(xy)
+#    qeKNN(xy,'gender',k=100,yesYVal='female')",classPredName='predClasses')
+# patchReg(svcensus,"occ",2,"function(xy) qeKNN(xy,'occ',k=100)",
+#   classPredName='predClasses')
 # patchReg(svcensus,"gender",2,"function(xy) qeLASSO(xy,'gender')",
 #   classPredName='predClasses')
 # patchReg(svcensus,"wageinc",2,"function(xy) ranger(wageinc ~ .,data=xy)",
 #    regPredName='predictions')
+
