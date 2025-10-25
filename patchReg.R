@@ -16,7 +16,7 @@
 # 3. no character or logical variables
 
 patchReg <- function(XYdata,yName,numClust,regCall,
-   savePreds=FALSE,regPredName=NULL,classPredName=NULL,
+   savePreds=TRUE,regPredName=NULL,classPredName=NULL,
    holdout = floor(min(1000,0.1*nrow(XYdata)))) 
 {
 
@@ -61,6 +61,7 @@ patchReg <- function(XYdata,yName,numClust,regCall,
    pROut$clustNums <- clustInfo$clustNums
    pROut$factorsInfo <- factorsInfo
    pROut$classif <- classif
+   pROut$tstIdxs <- tstIdxs
    pROut$regPredName <- regPredName
    pROut$classPredName <- classPredName
    class(pROut) <- 'prout'
@@ -71,10 +72,7 @@ patchReg <- function(XYdata,yName,numClust,regCall,
          pROut$testAcc <- mean(abs(tstYData[,1] - preds))
       else 
          pROut$testAcc <- mean(tstYData[,1] != preds)
-      if(savePreds) {
-         preds <- cbind(clustInfo$clustNums,preds)
-         preds <- as.data.frame(preds)
-         names(preds) <- c('clustNums','preds')
+      if (savePreds) {
          pROut$preds <- preds
       }
    }
@@ -82,9 +80,9 @@ patchReg <- function(XYdata,yName,numClust,regCall,
    pROut
 }
 
-plot.prout <- function() 
+plot.prout <- function(object) 
 {
-
+   tstClassIdxs <- object$classIdxs[object$tstIndxs]
 }
 
 findClusters <- function(kmout,trnXdata) 
