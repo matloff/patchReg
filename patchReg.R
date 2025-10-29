@@ -89,6 +89,20 @@ plot.prout <- function(object)
    densityplot(~preds,groups=clustNums,data=dta,plot.points=FALSE,auto.key=TRUE)
 }
 
+print.prout <- function(object) 
+{
+   cat('\ntestAcc: ',object$testAcc,'\n\n')
+   nclust <- length(object$centers)
+   print(names(object$centers))
+   cat('centers: \n\n',object$centers,'\n\n')
+#    tmp <- coef(object[[1]])
+#    if (!is.null(tmp)) {
+#       cat('coefficients:\n\n')
+#       for (i in 1:nclust) 
+#          print(object[[i]]$coefficients)
+#    }
+}
+
 findClusters <- function(kmout,trnXdata) 
 {
    clustInfo <- list()
