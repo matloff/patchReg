@@ -21,7 +21,7 @@ patchReg <- function(XYdata,yName,numClust,regCall,
 {
 
    yCol <- which(names(XYdata) == yName)
-   Xdata <- XYdata[,-yCol]
+   Xdata <- XYdata[,-yCol,drop=FALSE]
    Ydata <- XYdata[,yCol]
    classif <- class(Ydata) == 'factor'
    
@@ -91,16 +91,14 @@ plot.prout <- function(object)
 
 print.prout <- function(object) 
 {
-   cat('\ntestAcc: ',object$testAcc,'\n\n')
-   nclust <- length(object$centers)
-   print(names(object$centers))
-   cat('centers: \n\n',object$centers,'\n\n')
-#    tmp <- coef(object[[1]])
-#    if (!is.null(tmp)) {
-#       cat('coefficients:\n\n')
-#       for (i in 1:nclust) 
-#          print(object[[i]]$coefficients)
-#    }
+   print(object$testAcc)
+   print(object$centers)
+   if (!is.null(object[[1]]$coefficients)) {
+      for (i in 1:nrow(object$centers)) {
+         # print(object[[i]]$coefficients)
+         print(coef(object[[i]]))
+      }
+   }
 }
 
 findClusters <- function(kmout,trnXdata) 
@@ -123,7 +121,7 @@ predict.prout <- function(object,newX)
    npreds <- nrow(newX)
    preds <- vector(length=npreds)
    for (i in 1:npreds) {
-      newx <- newX[i,]
+      newx <- newX[i,,drop=FALSE]
       closestIdx <- FNN::get.knnx(object$centers,newx,k=1)$nn.index
       tmp <- predict(object[[closestIdx]],newx)
       if (object$classif) {
