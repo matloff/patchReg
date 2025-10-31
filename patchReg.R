@@ -91,9 +91,11 @@ plot.prout <- function(object)
 
 print.prout <- function(object) 
 {
-   print(object$testAcc)
+   cat('\ntestAcc:',object$testAcc,'\n\n')
+   cat('\ncenters:\n\n')
    print(object$centers)
    if (!is.null(object[[1]]$coefficients)) {
+      cat('\ncoefficients:\n\n')
       for (i in 1:nrow(object$centers)) {
          # print(object[[i]]$coefficients)
          print(coef(object[[i]]))
