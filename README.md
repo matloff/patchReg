@@ -3,7 +3,13 @@
 
 **An R package to increase predictive performance of a given fit**
 
-*Overview*
+*Summary*
+
+The method coded in this package quickly and conveniently converts a
+parametric model, say linear or logistic, into a "machine learning,"
+i.e. nonparametric one.
+
+*Introduction*
 
 We all know that linear models -- in this case meaning linear in X, not
 just in &beta; -- are just approximations. Sometimes they produce
@@ -210,27 +216,87 @@ We use the **qeML** function **qeLogit**.  The role of the argument
 object contains the predicted value as one of several components. The
 latter is the case here.
 
-``` r
-> replicMeans(50,"patchReg(Vowel,\"Class\",1,\"function(xy) qeLogit(xy,'Class')\",classPredFtn=classPredFtn.qeML)$testAcc")
-[1] 0.4078788
+``` rc
+> replicMeans(50,"patchReg(Vowel,\"Class\",1,\"function(xy) qeLogit(xy,'Class',holdout=NULL)\",classPredFtn=classPredFtn.qeML)$testAcc")
+[1] 0.4038384
 attr(,"stderr")
-[1] 0.006052974
+[1] 0.006404651
 There were 50 or more warnings (use warnings() to see the first 50)
-> replicMeans(50,"patchReg(Vowel,\"Class\",2,\"function(xy) qeLogit(xy,'Class')\",classPredFtn=classPredFtn.qeML)$testAcc")
-[1] 0.2351515
+> replicMeans(50,"patchReg(Vowel,\"Class\",2,\"function(xy) qeLogit(xy,'Class',holdout=NULL)\",classPredFtn=classPredFtn.qeML)$testAcc")
+[1] 0.2379798
 attr(,"stderr")
-[1] 0.005963909
+[1] 0.006350256
 There were 50 or more warnings (use warnings() to see the first 50)
-> replicMeans(50,"patchReg(Vowel,\"Class\",4,\"function(xy) qeLogit(xy,'Class')\",classPredFtn=classPredFtn.qeML)$testAcc")
-[1] 0.1436364
+> replicMeans(50,"patchReg(Vowel,\"Class\",4,\"function(xy) qeLogit(xy,'Class',holdout=NULL)\",classPredFtn=classPredFtn.qeML)$testAcc")
+[1] 0.139798
 attr(,"stderr")
-[1] 0.005268754
+[1] 0.005881784
 There were 50 or more warnings (use warnings() to see the first 50)
-> replicMeans(50,"patchReg(Vowel,\"Class\",8,\"function(xy) qeLogit(xy,'Class')\",classPredFtn=classPredFtn.qeML)$testAcc")
-[1] 0.1084848
+> replicMeans(50,"patchReg(Vowel,\"Class\",8,\"function(xy) qeLogit(xy,'Class',holdout=NULL)\",classPredFtn=classPredFtn.qeML)$testAcc")
+[1] 0.09272727
 attr(,"stderr")
-[1] 0.004431777
+[1] 0.004928985
 There were 50 or more warnings (use warnings() to see the first 50)
 ```
 
-*Nonparametric models:*
+(The warnings were as typical for **glm**, ie fitted probabilities of 1 or 0.)
+
+*Machine Learning methods*
+
+NOTE: WE ARE USING THE DEFAULT VALUES HERE
+
+``` r
+> replicMeans(50,"patchReg(svcensus,\"wageinc\",1,\"function(xy) qeRFranger(xy,'wageinc',holdout=NULL)\")$testAcc")
+[1] 24742.62
+attr(,"stderr")
+[1] 143.227
+> replicMeans(50,"patchReg(svcensus,\"wageinc\",2,\"function(xy) qeRFranger(xy,'wageinc',holdout=NULL)\")$testAcc")
+[1] 24651.46
+attr(,"stderr")
+[1] 157.5083
+> replicMeans(50,"patchReg(svcensus,\"wageinc\",4,\"function(xy) qeRFranger(xy,'wageinc',holdout=NULL)\")$testAcc")
+[1] 24770.97
+attr(,"stderr")
+[1] 130.703
+> replicMeans(50,"patchReg(svcensus,\"wageinc\",8,\"function(xy) qeRFranger(xy,'wageinc',holdout=NULL)\")$testAcc")
+[1] 24240.84
+attr(,"stderr")
+[1] 136.5613
+```
+
+Patchwork regression is also typically much faster than ML methods:
+
+``` r
+> system.time(replicMeans(5,"patchReg(svcensus,\"wageinc\",1,\"function(xy) qeRFranger(xy,'wageinc',holdout=NULL)\")$testAcc"))
+   user  system elapsed
+ 82.327   4.668  64.682
+> system.time(replicMeans(5,"patchReg(svcensus,\"wageinc\",1,\"function(xy) qeLin(xy,'wageinc',holdout=NULL)\")$testAcc"))
+   user  system elapsed
+  4.847   0.000   4.846
+> system.time(replicMeans(5,"patchReg(svcensus,\"wageinc\",2,\"function(xy) qeLin(xy,'wageinc',holdout=NULL)\")$testAcc"))
+   user  system elapsed
+  5.033   0.004   5.050
+> system.time(replicMeans(5,"patchReg(svcensus,\"wageinc\",4,\"function(xy) qeLin(xy,'wageinc',holdout=NULL)\")$testAcc"))
+   user  system elapsed
+  5.290   0.000   5.291
+> system.time(replicMeans(5,"patchReg(svcensus,\"wageinc\",8,\"function(xy) qeLin(xy,'wageinc',holdout=NULL)\")$testAcc"))
+   user  system elapsed
+  5.239   0.000   5.244
+
+   user  system elapsed
+159.320   0.459  20.603
+> system.time(replicMeans(5,"patchReg(svcensus,\"wageinc\",1,\"function(xy) qeXGBoost(xy,'wageinc',holdout=NULL)\")$testAcc"))
+
+   user  system elapsed
+166.377   0.920  21.598
+> system.time(replicMeans(5,"patchReg(svcensus,\"wageinc\",2,\"function(xy) qeXGBoost(xy,'wageinc',holdout=NULL)\")$testAcc"))
+
+   user  system elapsed
+190.237   1.371  24.969
+> system.time(replicMeans(5,"patchReg(svcensus,\"wageinc\",4,\"function(xy) qeXGBoost(xy,'wageinc',holdout=NULL)\")$testAcc"))
+
+   user  system elapsed
+220.673   2.277  29.042
+> system.time(replicMeans(5,"patchReg(svcensus,\"wageinc\",8,\"function(xy) qeXGBoost(xy,'wageinc',holdout=NULL)\")$testAcc"))
+```
+
