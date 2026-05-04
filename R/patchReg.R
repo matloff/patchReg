@@ -2,10 +2,18 @@
 # TODO:  (a) classification case, (b) only 1 X variable, (c) factors to
 # numeric conversion of factors in new obs
 
-# goal of this code: improve the predictive accuracy of a
-# regression/classification procedure by breaking the X space into
-# patches and doing separate fits on each patch; currently k-means is
-# used to create the patches
+# provide a simple, fast alternative to deep learning, random forests,
+# XGBoost etc.
+
+# it breaks the X space into patches defined by k-means clustering; a
+# model, say mean or conditional mean (lm, glm) is fit in each cluster;
+# to predict a new data point, determine its cluster and then use the
+# predict() function there
+
+# the per-cluster regression/classification model is specified via the
+# regCall argument; for convenience, it can be specified as 'uncond',
+# 'lm' or 'glm'; 'uncond' means average if Y is numeric, and means the
+# most common value of Y in the classification case
 
 # requirements
 
@@ -24,6 +32,9 @@ patchReg <- function(XYdata,yName,numClust,regCall,
    Xdata <- XYdata[,-yCol,drop=FALSE]
    Ydata <- XYdata[,yCol]
    classif <- class(Ydata) == 'factor'
+   nYlvls <- length(levels(Ydata))
+   binClass <- (classif && nYlvls==2)
+   multClass <- (classif && nYlvls==2)
    
    # convert predictor-variable factors to dummies 
    if (any(sapply(Xdata,class) != 'numeric')) {
@@ -52,6 +63,23 @@ patchReg <- function(XYdata,yName,numClust,regCall,
    # clusters in terms of the origin data
    clustData <- lapply(clustInfo$clusterIndices,
       function(indices) trnXYData[indices,])
+
+   # adjust regCall if needed; xy is the dataset newData belonging 
+   # to a given cluster
+   if (regCall %in% c('uncond','lm','glm')) {  # shortcut specs
+      if (regCall == 'uncond') {
+         if (!classif)  # uncond, Y is numeric { 
+            regCall <- 'function(xy) lm(wageinc ~ 1,xy)' 
+         } else {  # uncond, Y a factor
+            regCall <- 'function(xy) {y <- xy[,yCol]; tbl <- table(y);
+               names(tbl)[which.max(tbl)' 
+         } 
+   } else if (regCall == 'lm') { 
+             regCall <- paste( 'function(xy)',yName,'~ .,xy)') 
+          } else {   # glm } 
+          }
+      }
+   }
 
    # do separate fits to the clusters
    pROut <- lapply(clustData,evalr(regCall))
