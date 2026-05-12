@@ -23,18 +23,19 @@
 # 
 # 3. no character or logical variables
 
-patchReg <- function(XYdata,yName,numClust,regCall,
-   savePreds=TRUE,regPredFtn=NULL,classPredFtn=NULL,
+patchReg <- function(XYdata,yName,numClust,regCall,savePreds=TRUE,
    holdout = floor(min(1000,0.1*nrow(XYdata)))) 
 {
+
+   library(glmnet)
 
    yCol <- which(names(XYdata) == yName)
    Xdata <- XYdata[,-yCol,drop=FALSE]
    Ydata <- XYdata[,yCol]
    classif <- class(Ydata) == 'factor'
    nYlvls <- length(levels(Ydata))
-   binClass <- (classif && nYlvls==2)
-   multClass <- (classif && nYlvls==2)
+
+   regCallOrig <- regCall
    
    # convert predictor-variable factors to dummies 
    if (any(sapply(Xdata,class) != 'numeric')) {
@@ -51,7 +52,9 @@ patchReg <- function(XYdata,yName,numClust,regCall,
       tstYData <- newData[tstIdxs,numXvars+1,drop=FALSE]
       trnXData <- newData[-tstIdxs,1:numXvars,drop=FALSE]
       trnYData <- newData[-tstIdxs,numXvars+1,drop=FALSE]
+      if (classif) trnYData <- trnYData[,1]
       trnXYData <- newData[-tstIdxs,]
+   yCol <- which(names(trnXYData) == yName)
    } else {
       trnXData <- newData[,1:numXvars,drop=FALSE]
       tstYData <- newData[,numXvars+1,drop=FALSE]
@@ -64,35 +67,46 @@ patchReg <- function(XYdata,yName,numClust,regCall,
    clustData <- lapply(clustInfo$clusterIndices,
       function(indices) trnXYData[indices,])
 
-   # adjust regCall if needed; xy is the dataset newData belonging 
+   # adjust regCall if needed; xy is the portion of trnXYData belonging 
    # to a given cluster
-   if (regCall %in% c('uncond','lm','glm')) {  # shortcut specs
       if (regCall == 'uncond') {
-         if (!classif)  # uncond, Y is numeric { 
-            regCall <- 'function(xy) lm(wageinc ~ 1,xy)' 
+         if (!classif) {  # uncond, Y is numeric 
+            regCall <- function(xy) lm(wageinc ~ 1,xy)
          } else {  # uncond, Y a factor
-            regCall <- 'function(xy) {y <- xy[,yCol]; tbl <- table(y);
-               names(tbl)[which.max(tbl)' 
+            regCall <- function(xy) {
+               y <- xy[,yCol]; 
+               y <- levels(trnYData)[as.numeric(y)+1]
+               tbl <- table(y);
+               names(tbl)[which.max(tbl)]}
          } 
-   } else if (regCall == 'lm') { 
-             regCall <- paste( 'function(xy)',yName,'~ .,xy)') 
-          } else {   # glm } 
-          }
-      }
+      } else {
+         if (regCall == 'lm') { 
+                   regCall <- paste0( 'function(xy)',' lm(',yName,' ~ .,xy)') 
+                   regCall <- evalr(regCall)
+                   predFtn <- predict
+         } else {   # glm } 
+#                    tried glmnet but had problems
+#                    regCall <- function(xy) {
+#                       y <- xy[,yCol]; x <- xy[,-yCol];
+#                       glmnet(x,y,family="multinomial")}
+                   regCall <- function(xy) 
+                      qeLogit(xy,yName)
+         }
    }
 
    # do separate fits to the clusters
-   pROut <- lapply(clustData,evalr(regCall))
-   # element i of pROut is the value returned by calling regCall on
+   pROut <- list()
+browser()
+   pROut$fits <- lapply(clustData,regCall)
+   # element i of pROut$fits is the value returned by calling regCall on
    # cluster i
    pROut$centers <- kmeansOut$centers
    pROut$clustNums <- clustInfo$clustNums
    pROut$factorsInfo <- factorsInfo
    pROut$classif <- classif
    pROut$tstIdxs <- tstIdxs
-   pROut$regPredFtn <- regPredFtn
-   pROut$classPredFtn <- classPredFtn
-   pROut$classNames <- levels(Ydata)
+   pROut$regCall <- regCall
+   pROut$regCallOrig <- regCallOrig
    class(pROut) <- 'prout'
 
    if (holdout != 0) {
@@ -153,18 +167,31 @@ predict.prout <- function(object,newX)
    for (i in 1:npreds) {
       newx <- newX[i,,drop=FALSE]
       closestIdx <- FNN::get.knnx(object$centers,newx,k=1)$nn.index
-      tmp <- predict(object[[closestIdx]],newx)
-      if (object$classif) {
-         classPredFtn <- object$classPredFtn
-         tmp <- classPredFtn(tmp)
-         if (substr(tmp,1,4) == 'dfr.')  # due to factorsToDummies
-            tmp <- substr(tmp,5,nchar(tmp))
-      } else {  # regression case
-         regPredFtn <- object$regPredFtn
-         if (!is.null(regPredFtn)) 
-            # tmp <- tmp[[regPredName]]
-            tmp <- regPredFtn(tmp)
-      }
+      tmp <- 
+         if (object$regCallOrig == 'uncond') {
+            object$fits[[closestIdx]]
+         }
+         else {
+            if (object$regCallOrig != 'glm')
+               predict(object$fits[[closestIdx]],newx)
+            else 
+{
+               # predict.glmnet(object$fits[[closestIdx]],newx,type='class')
+               predict(object$fits[[closestIdx]],newx)
+}
+         }
+
+####      if (object$classif) {
+####         predFtn <- object$predFtn
+####         tmp <- predFtn(tmp)
+####         if (substr(tmp,1,4) == 'dfr.')  # due to factorsToDummies
+####            tmp <- substr(tmp,5,nchar(tmp))
+####      } else {  # regression case
+####         predFtn <- object$predFtn
+####         if (!is.null(predFtn)) 
+####            # tmp <- tmp[[regPredName]]
+####            tmp <- predFtn(tmp)
+####      }
       preds[i] <- tmp
    }
    if (inherits(preds,'list')) preds <- unlist(preds)  # qeKNN
